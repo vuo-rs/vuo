@@ -1,0 +1,18 @@
+[package]
+name = "vuo"
+version = "0.1.0"
+edition = "2024"
+description = "An asynchronous stream processing library for Rust, built on Actix, providing a rich set of functional operators."
+license = "Apache-2.0"
+
+[dependencies]
+actix = { version = "0.13" }
+actix-rt = "2"
+futures = "0.3"
+log = "0.4"                                                                      # Added log crate
+tokio = { version = "1.45.1", features = ["sync", "macros", "rt-multi-thread"] }
+uuid = { version = "1.17.0", features = ["v4", "serde"] }
+
+[dev-dependencies]
+actix-rt = "2"
+env_logger = "0.10" # Added env_logger for examples and tests

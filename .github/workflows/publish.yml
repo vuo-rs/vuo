@@ -1,0 +1,83 @@
+name: Publish to crates.io
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*" # Matches tags like v1.0.0, v0.2.1, v0.3.0-alpha, v1.0.0-rc1
+
+jobs:
+  build_and_test:
+    name: Build and Test with Tag Version
+    runs-on: ubuntu-latest
+    outputs:
+      publish_version: ${{ steps.get_tag_version.outputs.version_from_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.87 # Rust version
+
+      - name: Get Version from Tag
+        id: get_tag_version
+        run: |
+          VERSION_FROM_TAG=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+          echo "version_from_tag=${VERSION_FROM_TAG}" >> $GITHUB_OUTPUT
+          echo "Extracted version from tag: ${VERSION_FROM_TAG}"
+
+      - name: Update Cargo.toml with Tag Version
+        env:
+          NEW_VERSION: ${{ steps.get_tag_version.outputs.version_from_tag }}
+        run: |
+          echo "Updating Cargo.toml version to: $NEW_VERSION"
+          # Using awk to replace the version line.
+          # This approach is generally robust for TOML files.
+          # It looks for a line starting with 'version' followed by optional whitespace,
+          # an equals sign, optional whitespace, and a quote.
+          # It replaces the entire line with 'version = "$NEW_VERSION"'.
+          awk -v new_ver="$NEW_VERSION" '/^version\s*=\s*"/{$0="version = \""new_ver"\""} 1' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+          echo "Cargo.toml after update:"
+          cat Cargo.toml
+          # Verify the change was successful by checking if the new version string is present.
+          grep -q "^version\s*=\s*\"$NEW_VERSION\"" Cargo.toml || (echo "Failed to update Cargo.toml version" && exit 1)
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
+
+  publish:
+    name: Publish Vuo Crate to crates.io
+    needs: build_and_test # Depends on the build_and_test job succeeding
+    runs-on: ubuntu-latest
+    environment:
+      name: crates-io-publish # Name of the GitHub Environment you will create
+      url: https://crates.io/crates/vuo/${{needs.build_and_test.outputs.publish_version}} # Optional: URL for the approval UI
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Checkout code again for this job's workspace
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.87 # Ensure consistency with the build_and_test job
+
+      - name: Set Cargo.toml Version from Tag for Publishing
+        env:
+          PUBLISH_VERSION: ${{ needs.build_and_test.outputs.publish_version }}
+        run: |
+          echo "Setting Cargo.toml version for publishing to: $PUBLISH_VERSION"
+          # Perform the same update as in the build_and_test job to ensure consistency.
+          awk -v new_ver="$PUBLISH_VERSION" '/^version\s*=\s*"/{$0="version = \""new_ver"\""} 1' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+          echo "Cargo.toml for publishing:"
+          cat Cargo.toml
+          grep -q "^version\s*=\s*\"$PUBLISH_VERSION\"" Cargo.toml || (echo "Failed to set Cargo.toml version for publishing" && exit 1)
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish
