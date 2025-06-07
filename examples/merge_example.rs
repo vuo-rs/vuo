@@ -85,7 +85,7 @@ async fn run_merge_example() {
 }
 
 fn main() {
-    // Optional: Initialize a logger (like env_logger) to see any internal Virta logs
+    // Optional: Initialize a logger (like env_logger) to see any internal vuo logs
     // or the println! statements within the async blocks if you uncomment them.
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
 

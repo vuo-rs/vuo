@@ -1,5 +1,5 @@
 use tokio::task::LocalSet; // Import LocalSet
-use vuo::Stream; // Assuming Stream is directly available under virta
+use vuo::Stream; // Assuming Stream is directly available under vuo
 
 // Function to convert Fahrenheit to Celsius
 fn fahrenheit_to_celsius(f: f64) -> f64 {
@@ -49,10 +49,10 @@ async fn main() {
 
             // The stream processing starts when a terminal operation like drain (or compile_to_list, etc.)
             // is awaited or its setup is executed.
-            // In Virta, drain itself returns a new Stream<()>, which also needs a terminal operation.
+            // In Vuo, drain itself returns a new Stream<()>, which also needs a terminal operation.
             // For this example, we'll use compile_to_list() on the unit stream to run it.
             // If drain was meant to be the final consumer, it'd typically be awaited if it returned a Future<()>.\
-            // Given Virta's design, the result of drain() is another Stream, so:
+            // Given Vuo's design, the result of drain() is another Stream, so:
             let _ = final_stream.compile_to_list().await;
 
             // Alternative: collect and print

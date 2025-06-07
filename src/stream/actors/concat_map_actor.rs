@@ -1,5 +1,5 @@
 use crate::stream::CloneableStreamable;
-use crate::stream::Stream as VirtaStream;
+use crate::stream::Stream as VuoStream;
 use crate::stream::StreamMessage;
 use crate::stream::Streamable; // Alias our Stream struct
 
@@ -12,13 +12,13 @@ use std::marker::PhantomData;
 
 use super::inner_stream_proxy_actor::*;
 
-// The S generic parameter is removed. FStream now directly produces VirtaStream<NewOut>.
+// The S generic parameter is removed. FStream now directly produces VuoStream<NewOut>.
 #[derive(Debug)]
 pub(crate) struct ConcatMapActor<Out, NewOut, FStream>
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VuoStream
 {
     map_to_stream_fn: FStream,
     main_downstream: Recipient<StreamMessage<NewOut>>,
@@ -32,7 +32,7 @@ impl<Out, NewOut, FStream> ConcatMapActor<Out, NewOut, FStream>
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
 {
     pub(crate) fn new(map_fn: FStream, downstream: Recipient<StreamMessage<NewOut>>) -> Self {
         Self {
@@ -58,7 +58,7 @@ where
         }
 
         if let Some(outer_item) = self.outer_stream_buffer.pop_front() {
-            let inner_stream: VirtaStream<NewOut> = (self.map_to_stream_fn)(outer_item); // Use aliased VirtaStream
+            let inner_stream: VuoStream<NewOut> = (self.map_to_stream_fn)(outer_item); // Use aliased VirtaStream
             self.is_inner_stream_active = true;
 
             let items_recipient_for_proxy = ctx.address().recipient::<InnerStreamItemMsg<NewOut>>();
@@ -74,7 +74,7 @@ where
             let recipient_for_inner_stream_setup =
                 proxy_actor_addr.recipient::<StreamMessage<NewOut>>();
 
-            let inner_setup_fn = inner_stream.setup_fn; // Access setup_fn from VirtaStream
+            let inner_setup_fn = inner_stream.setup_fn; // Access setup_fn from VuoStream
             let actor_addr_clone_for_task = ctx.address();
 
             let fut = async move {
@@ -99,7 +99,7 @@ impl<Out, NewOut, FStream> Actor for ConcatMapActor<Out, NewOut, FStream>
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
 {
     type Context = Context<Self>;
 
@@ -122,7 +122,7 @@ impl<Out, NewOut, FStream> Handler<StreamMessage<Out>> for ConcatMapActor<Out, N
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
 {
     type Result = ();
 
@@ -148,7 +148,7 @@ impl<Out, NewOut, FStream> Handler<InnerStreamItemMsg<NewOut>>
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
 {
     type Result = ();
 
@@ -169,7 +169,7 @@ impl<Out, NewOut, FStream> Handler<InnerStreamCompletedMsg> for ConcatMapActor<O
 where
     Out: Streamable,
     NewOut: CloneableStreamable,
-    FStream: FnMut(Out) -> VirtaStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
+    FStream: FnMut(Out) -> VuoStream<NewOut> + Send + 'static + Clone + Unpin, // Use aliased VirtaStream
 {
     type Result = ();
 

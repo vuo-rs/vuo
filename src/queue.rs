@@ -1,14 +1,14 @@
 use crate::stream::streamable::CloneableStreamable;
 use crate::stream::{Stream, StreamMessage};
 use actix::prelude::*;
-use futures::FutureExt; // For .boxed()
 use futures::channel::oneshot;
 use futures::future::BoxFuture; // This is Pin<Box<dyn Future + Send>>
+use futures::FutureExt; // For .boxed()
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use tokio::sync::mpsc; // For MPSC channel
-use tokio::task;       // For tokio::task::spawn_local
+use tokio::task; // For tokio::task::spawn_local
 
 #[derive(Debug)]
 pub enum QueueOfferError<A: CloneableStreamable> {
@@ -230,28 +230,28 @@ impl<A: CloneableStreamable + 'static> Handler<ConsumeMessage<A>> for QueueActor
     }
 }
 
-// --- VirtaQueue Public API ---
+// --- VuoQueue Public API ---
 
 #[derive(Debug)]
-pub struct VirtaQueue<A: CloneableStreamable> {
+pub struct VuoQueue<A: CloneableStreamable> {
     actor_addr: Addr<QueueActor<A>>,
     _phantom_a: PhantomData<A>,
 }
 
-impl<A: CloneableStreamable> Clone for VirtaQueue<A> {
+impl<A: CloneableStreamable> Clone for VuoQueue<A> {
     fn clone(&self) -> Self {
-        VirtaQueue {
+        VuoQueue {
             actor_addr: self.actor_addr.clone(),
             _phantom_a: PhantomData,
         }
     }
 }
 
-impl<A: CloneableStreamable + 'static> VirtaQueue<A> {
+impl<A: CloneableStreamable + 'static> VuoQueue<A> {
     pub fn new(capacity: usize) -> Self {
         let effective_capacity = if capacity == 0 { 1 } else { capacity };
         let actor_addr = QueueActor::new(effective_capacity).start();
-        VirtaQueue {
+        VuoQueue {
             actor_addr,
             _phantom_a: PhantomData,
         }
@@ -260,7 +260,7 @@ impl<A: CloneableStreamable + 'static> VirtaQueue<A> {
     pub async fn offer(&self, item: A) -> Result<(), QueueOfferError<A>> {
         let (tx, rx) = oneshot::channel();
         self.actor_addr.do_send(OfferMessage {
-            item: item.clone(), 
+            item: item.clone(),
             tx,
         });
         match rx.await {
@@ -309,19 +309,23 @@ impl<A: CloneableStreamable + 'static> VirtaQueue<A> {
 
     pub fn dequeue_stream(&self) -> Stream<A> {
         let queue_for_polling_task = self.clone();
-        
+
         // MPSC channel buffer size.
         const MPSC_BUFFER_SIZE: usize = 16; // Arbitrary small buffer
         let (mpsc_sender, mpsc_receiver) = mpsc::channel::<StreamMessage<A>>(MPSC_BUFFER_SIZE);
 
-        // This task polls the VirtaQueue (which is !Send due to Addr) 
+        // This task polls the VuoQueue (which is !Send due to Addr)
         // and sends results via the MPSC channel.
         // It must run on a LocalSet.
         task::spawn_local(async move {
             loop {
                 match queue_for_polling_task.poll().await {
                     Ok(item) => {
-                        if mpsc_sender.send(StreamMessage::Element(item)).await.is_err() {
+                        if mpsc_sender
+                            .send(StreamMessage::Element(item))
+                            .await
+                            .is_err()
+                        {
                             // MPSC receiver was dropped, consumer stream is gone.
                             break;
                         }
@@ -366,11 +370,11 @@ impl<A: CloneableStreamable + 'static> VirtaQueue<A> {
                             let _ = downstream_actix_recipient.try_send(StreamMessage::End);
                             return Ok(());
                         }
-                        None => { 
+                        None => {
                             // MPSC channel was closed (sender dropped by the polling task ending).
                             // This is the primary way the stream terminates.
                             let _ = downstream_actix_recipient.try_send(StreamMessage::End);
-                            return Ok(()); 
+                            return Ok(());
                         }
                     }
                 }
@@ -380,7 +384,7 @@ impl<A: CloneableStreamable + 'static> VirtaQueue<A> {
 
         Stream {
             // Box::new(setup_fn_closure) creates a Box<dyn FnOnce + Send> if setup_fn_closure is Send.
-            setup_fn: Box::new(setup_fn_closure), 
+            setup_fn: Box::new(setup_fn_closure),
             _phantom: PhantomData,
         }
     }

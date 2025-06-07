@@ -5,8 +5,8 @@ use futures::StreamExt as FuturesStreamExt; // For .next() on MPSC receiver
 use std::marker::PhantomData;
 use std::time::Duration;
 use tokio::task::{self, LocalSet};
-use vuo::Stream;
-use vuo::stream::StreamMessage; // Correct import path for StreamMessage
+use vuo::stream::StreamMessage;
+use vuo::Stream; // Correct import path for StreamMessage
 
 #[derive(Debug, Clone, PartialEq)]
 struct Event {
@@ -14,7 +14,7 @@ struct Event {
     data: String,
 }
 
-// No explicit `impl Streamable for Event` needed due to blanket impl in virta::stream::streamable.rs,
+// No explicit `impl Streamable for Event` needed due to blanket impl in vuo::stream::streamable.rs,
 // assuming Event satisfies 'static + Send + Unpin + Debug (which it does).
 
 fn main() {

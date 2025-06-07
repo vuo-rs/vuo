@@ -4,7 +4,7 @@ use tokio::task::{self, LocalSet};
 use vuo::{Signal, Stream}; // Stream is used by signal.discrete()
 
 // Item for the signal. Must satisfy 'static + Send + Clone + Unpin + Debug + Streamable.
-// CloneableStreamable (from virta::stream::streamable) covers these if A is Clone.
+// CloneableStreamable (from vuo::stream::streamable) covers these if A is Clone.
 #[derive(Debug, Clone, PartialEq)] // PartialEq for assertions
 struct AppConfig {
     feature_x_enabled: bool,
@@ -12,13 +12,13 @@ struct AppConfig {
 }
 
 // Ensure AppConfig meets Streamable.
-// The virta::stream::Streamable trait requires 'static + Send + Unpin + Debug.
+// The vuo::stream::Streamable trait requires 'static + Send + Unpin + Debug.
 // Our AppConfig struct, with its fields (bool, u32) and derived Debug + Clone,
 // will automatically satisfy Send, Sync, Unpin, and 'static under normal circumstances.
 // This explicit impl is to make it absolutely clear for the compiler if needed,
-// assuming virta::stream::Streamable is accessible.
-// The blanket impl in virta/src/stream/streamable.rs will cover AppConfig.
-// impl virta::stream::Streamable for AppConfig {}
+// assuming vuo::stream::Streamable is accessible.
+// The blanket impl in vuo/src/stream/streamable.rs will cover AppConfig.
+// impl vuo::stream::Streamable for AppConfig {}
 
 fn main() {
     let system = actix_rt::System::new();

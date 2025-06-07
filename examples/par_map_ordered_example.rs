@@ -2,7 +2,7 @@ use actix_rt;
 use futures::FutureExt; // For .boxed()
 use std::time::Duration;
 use tokio::task::LocalSet;
-use vuo::Stream; // Assuming virta::Streamable is re-exported or accessible
+use vuo::Stream; // Assuming Vuo::Streamable is re-exported or accessible
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct OrderTestItem {
@@ -17,13 +17,13 @@ struct ProcessedOrderTestItem {
     processing_time_ms: u64,
 }
 
-// Ensure structs are Streamable. The blanket impl in virta::stream::streamable.rs should cover this,
+// Ensure structs are Streamable. The blanket impl in vuo::stream::streamable.rs should cover this,
 // as long as they satisfy 'static + Send + Unpin + Debug.
-// If virta::Streamable is not directly in scope, this might need `use virta::stream::Streamable;`
+// If vuo::Streamable is not directly in scope, this might need `use vuo::stream::Streamable;`
 // and then explicit impls. For now, relying on blanket impl.
 // E.g., if needed:
-// impl virta::stream::Streamable for OrderTestItem {}
-// impl virta::stream::Streamable for ProcessedOrderTestItem {}
+// impl vuo::stream::Streamable for OrderTestItem {}
+// impl vuo::stream::Streamable for ProcessedOrderTestItem {}
 
 // Asynchronous mapping function that simulates work with variable delays
 async fn process_item_with_delay(item: OrderTestItem) -> ProcessedOrderTestItem {
@@ -70,7 +70,7 @@ fn main() {
     });
 
     system.block_on(async {
-        // Use LocalSet for consistency with other examples and if any virta internal
+        // Use LocalSet for consistency with other examples and if any vuo internal
         // relies on task::spawn_local from the calling context.
         let local_set = LocalSet::new();
         local_set.run_until(async {

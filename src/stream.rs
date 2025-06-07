@@ -16,17 +16,17 @@ use actors::{
 
 use actix::prelude::{Actor, Context, Handler, Recipient}; // More specific imports
 use actix_rt; // Added for actix_rt::spawn
-use futures::FutureExt;
 use futures::future::BoxFuture; // Added TryFutureExt for map_err on JoinHandle
-use std::fmt::Debug;
+use futures::FutureExt;
 use std::marker::PhantomData;
+use std::{fmt::Debug, future::Future};
 
 // Specific imports for zip_with and its actors
 use actors::zip_actor::{InputStreamMessageA, InputStreamMessageB, ZipInputAdapterActor};
 
 // --- Core Stream Message ---
 #[derive(Debug, Clone)] // Keep Debug and Clone
-// Removed #[derive(Message)] and #[rtype] for manual impl if derive fails fundamentally
+                        // Removed #[derive(Message)] and #[rtype] for manual impl if derive fails fundamentally
 pub enum StreamMessage<T: Streamable> {
     Element(T),
     End,
@@ -127,9 +127,9 @@ impl<Out: Streamable> Stream<Out> {
                     let filter_actor_addr =
                         FilterActor::new(predicate.clone(), downstream_recipient_for_filter_output)
                             .start(); // FilterActor is an Actix actor
-                    // `filter_actor_addr.recipient()` is !Send.
-                    // The future returned by `prev_setup_fn` must be Send.
-                    // If `prev_setup_fn`'s execution involves `!Send` types across await, this can be an issue.
+                                      // `filter_actor_addr.recipient()` is !Send.
+                                      // The future returned by `prev_setup_fn` must be Send.
+                                      // If `prev_setup_fn`'s execution involves `!Send` types across await, this can be an issue.
                     let prev_stage_recipient = filter_actor_addr.recipient::<StreamMessage<Out>>();
                     (prev_setup_fn)(prev_stage_recipient).await
                 }
@@ -641,7 +641,7 @@ impl<Out: Streamable> Stream<Out> {
             // This closure captures `initial_state` (moved) and `f` (moved). Both are Send.
             // The closure is Send.
             let mut current_state = initial_state; // mutable state for the loop
-            // `f` is also captured and mutable here (due to FnMut).
+                                                   // `f` is also captured and mutable here (due to FnMut).
 
             async move {
                 // This future must be Send.
@@ -654,7 +654,8 @@ impl<Out: Streamable> Stream<Out> {
                                 .try_send(StreamMessage::Element(element))
                                 .is_err()
                             {
-                                return Err(String::from("Downstream consumer gone during unfold")); // Downstream consumer is gone
+                                return Err(String::from("Downstream consumer gone during unfold"));
+                                // Downstream consumer is gone
                             }
                             current_state = next_state;
                         }
@@ -665,7 +666,8 @@ impl<Out: Streamable> Stream<Out> {
                     }
                 }
                 if downstream_recipient.try_send(StreamMessage::End).is_err() {
-                    return Err(String::from("Downstream consumer gone at end of unfold")); // Downstream consumer is gone
+                    return Err(String::from("Downstream consumer gone at end of unfold"));
+                    // Downstream consumer is gone
                 }
                 Ok(())
             }
@@ -1134,8 +1136,8 @@ async fn run_stream_to_list<T: CloneableStreamable>(stream: Stream<T>) -> Vec<T>
 mod tests {
     use super::*;
     use actix_rt;
-    use futures::StreamExt as FuturesStreamExt; // Added for MPSC stream in tests
     use futures::future::{pending, ready};
+    use futures::StreamExt as FuturesStreamExt; // Added for MPSC stream in tests
     use std::collections::HashSet;
     use std::marker::PhantomData; // Added for custom stream in tests
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -1633,13 +1635,13 @@ mod tests {
         // Outer stream taken to 1 element, inner stream taken to 1 element
         let stream_outer = Stream::emits(vec![1, 2]).take(1); // Emits [1], then End
         let stream_1 = stream_outer.concat_map(|x| Stream::emits(vec![x, x * 2]).take(1)); // Inner emits [x], then End
-        // Expected: outer(1) -> inner(1) -> result [1]
+                                                                                           // Expected: outer(1) -> inner(1) -> result [1]
         assert_eq!(run_stream_to_list(stream_1).await, vec![1]);
 
         // Outer stream 2 elements, inner streams taken to 2 elements
         let stream_outer_2 = Stream::emits(vec![1, 2]); // Emits [1, 2], then End
         let stream_2 = stream_outer_2.concat_map(|x| Stream::emits(vec![x, x * 2, x * 3]).take(2)); // Inner emits [x, x*2], then End
-        // Expected: outer(1) -> inner(1,2) -> outer(2) -> inner(2,4) -> result [1,2,2,4]
+                                                                                                    // Expected: outer(1) -> inner(1,2) -> outer(2) -> inner(2,4) -> result [1,2,2,4]
         assert_eq!(run_stream_to_list(stream_2).await, vec![1, 2, 2, 4]);
     }
 

@@ -1,10 +1,10 @@
 use std::time::Duration;
 use tokio::task::LocalSet;
-use vuo::Queue;
 use vuo::queue::QueueOfferError;
+use vuo::Queue;
 
 // Items in the queue must be CloneableStreamable.
-// For virtaus, Streamable implies: Send + Sync + Clone + std::fmt::Debug + 'static.
+// For , Streamable implies: Send + Sync + Clone + std::fmt::Debug + 'static.
 // i32 satisfies these requirements.
 
 #[tokio::main]
@@ -54,7 +54,7 @@ async fn main() {
         });
 
         // Consumer stream
-        // Use the new dequeue_stream() method from VirtaQueue
+        // Use the new dequeue_stream() method from VuoQueue
         let consumer_queue_clone = queue.clone();
         let consuming_stream = consumer_queue_clone.dequeue_stream();
 

@@ -1,7 +1,7 @@
 [package]
 name = "vuo"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 description = "An asynchronous stream processing library for Rust, built on Actix, providing a rich set of functional operators."
 license = "Apache-2.0"
 
